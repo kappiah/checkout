@@ -1,11 +1,15 @@
 require 'rspec'
+require 'pry'
 
 class Rule
   def multiple_purchase
     return Proc.new do |items|
-      items.select{|i| i.code == "FR1" }
-      if items.length == 2
+      collection = items.select{|i| i.code == "FR1" }
+
+      if collection.length == 2
         items[0].price
+      else
+        0
       end
     end
   end
@@ -16,6 +20,7 @@ class Item
 
   def initialize(price:, code:)
     @price = price
+    @code = code
   end
 end
 
@@ -34,7 +39,9 @@ class Checkout
   def total
     total = @items.inject(0.0) {|total, item | total + item.price }
     item_discounts = @pricing_rules.map {|rule| rule.multiple_purchase.call(@items) }
+
     discounts = item_discounts.inject(0.0) {|total, discount| total + discount }
+
     total - discounts
   end
 end
@@ -67,7 +74,7 @@ describe "Checkout" do
     expect(checkout.total).to eq 8.0
   end
 
-  it "Calclates a discount for multiple purchases" do
+  it "Calclates a discount for multiple item purchases" do
     pricing_rules = [Rule.new]
     checkout = Checkout.new(pricing_rules)
 
@@ -77,5 +84,19 @@ describe "Checkout" do
     checkout.scan(item2)
 
     expect(checkout.total).to eq 3.11
+  end
+
+  it "Calclates a discount for cart with mixed item purchases" do
+    pricing_rules = [Rule.new]
+    checkout = Checkout.new(pricing_rules)
+
+    item1 = Item.new(code: 'FR1', price: 3.11)
+    item2 = Item.new(code: 'FR1', price: 3.11)
+    item3 = Item.new(code: 'SR1', price: 5.00)
+    checkout.scan(item1)
+    checkout.scan(item2)
+    checkout.scan(item3)
+
+    expect(checkout.total).to eq 8.11
   end
 end
