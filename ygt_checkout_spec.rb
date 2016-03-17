@@ -1,10 +1,30 @@
 require 'rspec'
 
+class Rule
+  def multiple_purchase
+    return Proc.new do |items|
+      items.select{|i| i.code == "FR1" }
+      if items.length == 2
+        items[0].price
+      end
+    end
+  end
+end
+
+class Item
+  attr_reader :code, :price
+
+  def initialize(price:, code:)
+    @price = price
+  end
+end
+
 class Checkout
   attr_reader :items
 
-  def initialize
+  def initialize(pricing_rules)
     @items = []
+    @pricing_rules = pricing_rules
   end
 
   def scan(item)
@@ -12,19 +32,24 @@ class Checkout
   end
 
   def total
-    @items.inject(0.0) {|total, item | total + item.price }
+    total = @items.inject(0.0) {|total, item | total + item.price }
+    item_discounts = @pricing_rules.map {|rule| rule.multiple_purchase.call(@items) }
+    discounts = item_discounts.inject(0.0) {|total, discount| total + discount }
+    total - discounts
   end
 end
 
 describe "Checkout" do
 
   it "Show a zero total when empty" do
-    checkout = Checkout.new
+    pricing_rules = []
+    checkout = Checkout.new(pricing_rules)
     expect(checkout.total).to eq 0
   end
 
   it "scans items into the cart" do
-    checkout = Checkout.new
+    pricing_rules = []
+    checkout = Checkout.new(pricing_rules)
     item = double
     checkout.scan(item)
 
@@ -32,12 +57,25 @@ describe "Checkout" do
   end
 
   it "Calcuates a total for all items in the cart" do
-    checkout = Checkout.new
-    item1 = double(price: 5.0)
-    item2 = double(price: 3.0)
+    pricing_rules = []
+    checkout = Checkout.new(pricing_rules)
+    item1 = Item.new(code: 'FR1', price: 5.0)
+    item2 = Item.new(code: 'FR1', price: 3.0)
     checkout.scan(item1)
     checkout.scan(item2)
 
     expect(checkout.total).to eq 8.0
+  end
+
+  it "Calclates a discount for multiple purchases" do
+    pricing_rules = [Rule.new]
+    checkout = Checkout.new(pricing_rules)
+
+    item1 = Item.new(code: 'FR1', price: 3.11)
+    item2 = Item.new(code: 'FR1', price: 3.11)
+    checkout.scan(item1)
+    checkout.scan(item2)
+
+    expect(checkout.total).to eq 3.11
   end
 end
