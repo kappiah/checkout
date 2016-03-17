@@ -1,14 +1,12 @@
 require 'rspec'
-require 'pry'
 
 class TwoForOne
   def discount
     return Proc.new do |items|
       collection = items.select{|i| i.code == "FR1" }
 
-      #TODO: The below should calculate on multiples of two
-      if collection.length == 2
-        items[0].price
+      if collection.size >= 2
+        collection[0].price * collection.each_slice(2).reject{|a| a.size != 2}.size
       else
         0
       end
@@ -54,7 +52,6 @@ class Checkout
   def total
     total = @items.inject(0.0) {|total, item | total + item.price }
     item_discounts = @pricing_rules.map {|rule| rule.discount.call(@items) }
-
     discounts = item_discounts.inject(0.0) {|total, discount| total + discount }
 
     total - discounts
@@ -89,18 +86,6 @@ describe "Checkout" do
     expect(checkout.total).to eq 8.0
   end
 
-  it "Calclates a discount for multiple item purchases" do
-    pricing_rules = [TwoForOne.new]
-    checkout = Checkout.new(pricing_rules)
-
-    item1 = Item.new(code: 'FR1', price: 3.11)
-    item2 = Item.new(code: 'FR1', price: 3.11)
-    checkout.scan(item1)
-    checkout.scan(item2)
-
-    expect(checkout.total).to eq 3.11
-  end
-
   it "Calclates a discount for cart with mixed item purchases" do
     pricing_rules = [TwoForOne.new]
     checkout = Checkout.new(pricing_rules)
@@ -127,5 +112,51 @@ describe "Checkout" do
     checkout.scan(item3)
 
     expect(checkout.total).to eq 13.50
+  end
+
+  it "Test data - 1 -- Calclates a discount for cart with mixed item purchases" do
+    pricing_rules = [BulkPurchase.new, TwoForOne.new]
+    checkout = Checkout.new(pricing_rules)
+
+    item1 = Item.new(code: 'FR1', price: 3.11)
+    item2 = Item.new(code: 'SR1', price: 5.00)
+    item3 = Item.new(code: 'FR1', price: 3.11)
+    item4 = Item.new(code: 'FR1', price: 3.11)
+    item5 = Item.new(code: 'CF1', price: 11.23)
+    checkout.scan(item1)
+    checkout.scan(item2)
+    checkout.scan(item3)
+    checkout.scan(item4)
+    checkout.scan(item5)
+
+    expect(checkout.total).to eq 22.45
+  end
+
+  it "Test data - 2 -- Calclates a discount for multiple item purchases" do
+    pricing_rules = [BulkPurchase.new, TwoForOne.new]
+    checkout = Checkout.new(pricing_rules)
+
+    item1 = Item.new(code: 'FR1', price: 3.11)
+    item2 = Item.new(code: 'FR1', price: 3.11)
+    checkout.scan(item1)
+    checkout.scan(item2)
+
+    expect(checkout.total).to eq 3.11
+  end
+
+  it "Test data - 3 -- Calclates a discount for cart with mixed item purchases" do
+    pricing_rules = [BulkPurchase.new, TwoForOne.new]
+    checkout = Checkout.new(pricing_rules)
+
+    item1 = Item.new(code: 'SR1', price: 5.00)
+    item2 = Item.new(code: 'SR1', price: 5.00)
+    item3 = Item.new(code: 'FR1', price: 3.11)
+    item4 = Item.new(code: 'SR1', price: 5.00)
+    checkout.scan(item1)
+    checkout.scan(item2)
+    checkout.scan(item3)
+    checkout.scan(item4)
+
+    expect(checkout.total).to eq 16.61
   end
 end
