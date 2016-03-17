@@ -12,7 +12,7 @@ class Checkout
   end
 
   def total
-    0
+    @items.inject(0.0) {|total, item | total + item.price }
   end
 end
 
@@ -29,5 +29,15 @@ describe "Checkout" do
     checkout.scan(item)
 
     expect(checkout.items.length).to eq 1
+  end
+
+  it "Calcuates a total for all items in the cart" do
+    checkout = Checkout.new
+    item1 = double(price: 5.0)
+    item2 = double(price: 3.0)
+    checkout.scan(item1)
+    checkout.scan(item2)
+
+    expect(checkout.total).to eq 8.0
   end
 end
