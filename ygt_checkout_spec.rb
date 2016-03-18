@@ -1,9 +1,13 @@
 require 'rspec'
 
 class TwoForOne
+  def initialize(codes:)
+    @codes = codes
+  end
+
   def discount
     return Proc.new do |items|
-      collection = items.select{|i| i.code == "FR1" }
+      collection = items.select{|i| i.code == @codes }
 
       if collection.size >= 2
         collection[0].price * collection.each_slice(2).reject{|a| a.size != 2}.size
@@ -15,9 +19,13 @@ class TwoForOne
 end
 
 class BulkPurchase
+  def initialize(codes:)
+    @codes = codes
+  end
+
   def discount
     return Proc.new do |items|
-      collection = items.select{|i| i.code == "SR1" }
+      collection = items.select{|i| i.code == @codes }
 
       if collection.length >= 3
         collection.length * 0.50
@@ -87,7 +95,7 @@ describe "Checkout" do
   end
 
   it "Calclates a discount for cart with mixed item purchases" do
-    pricing_rules = [TwoForOne.new]
+    pricing_rules = [TwoForOne.new(codes: "FR1")]
     checkout = Checkout.new(pricing_rules)
 
     item1 = Item.new(code: 'FR1', price: 3.11)
@@ -101,7 +109,7 @@ describe "Checkout" do
   end
 
   it "Calclates a discount for cart with mixed item purchases" do
-    pricing_rules = [BulkPurchase.new]
+    pricing_rules = [BulkPurchase.new(codes: "SR1")]
     checkout = Checkout.new(pricing_rules)
 
     item1 = Item.new(code: 'SR1', price: 5.00)
@@ -115,7 +123,7 @@ describe "Checkout" do
   end
 
   it "Test data - 1 -- Calclates a discount for cart with mixed item purchases" do
-    pricing_rules = [BulkPurchase.new, TwoForOne.new]
+    pricing_rules = [BulkPurchase.new(codes: "SR1"), TwoForOne.new(codes: "FR1")]
     checkout = Checkout.new(pricing_rules)
 
     item1 = Item.new(code: 'FR1', price: 3.11)
@@ -133,7 +141,7 @@ describe "Checkout" do
   end
 
   it "Test data - 2 -- Calclates a discount for multiple item purchases" do
-    pricing_rules = [BulkPurchase.new, TwoForOne.new]
+    pricing_rules = [BulkPurchase.new(codes: "SR1"), TwoForOne.new(codes: "FR1")]
     checkout = Checkout.new(pricing_rules)
 
     item1 = Item.new(code: 'FR1', price: 3.11)
@@ -145,7 +153,7 @@ describe "Checkout" do
   end
 
   it "Test data - 3 -- Calclates a discount for cart with mixed item purchases" do
-    pricing_rules = [BulkPurchase.new, TwoForOne.new]
+    pricing_rules = [BulkPurchase.new(codes: "SR1"), TwoForOne.new(codes: "FR1")]
     checkout = Checkout.new(pricing_rules)
 
     item1 = Item.new(code: 'SR1', price: 5.00)
